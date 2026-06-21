@@ -20,7 +20,7 @@ export async function createInvoice(formData: FormData) {
   let systemUser = await prisma.user.findFirst({ where: { tenantId, role: "system" } })
   if (!systemUser) {
     systemUser = await prisma.user.create({
-      data: { email: `system@${tenantId}.local`, name: "System", password: "", role: "system", tenantId },
+      data: { email: `system@${tenantId}.local`, name: "System", role: "system", tenantId },
     })
   }
 

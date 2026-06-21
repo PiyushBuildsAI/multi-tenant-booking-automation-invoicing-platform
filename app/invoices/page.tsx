@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, Send, CheckCircle2, AlertTriangle } from "lucide-react"
 import Link from "next/link"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
 const statusBadge: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   PAID: "default",
@@ -15,6 +18,9 @@ const statusBadge: Record<string, "default" | "secondary" | "destructive" | "out
 }
 
 export default async function InvoicesPage() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) redirect("/login")
+
   const tenantId = await getTenantId()
   const invoices = await prisma.invoice.findMany({
     where: { tenantId },

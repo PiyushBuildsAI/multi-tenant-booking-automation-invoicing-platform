@@ -1,8 +1,14 @@
 import { prisma } from "@/lib/prisma"
 import { getTenantId, getTenant } from "@/lib/tenant"
 import { SettingsTabs } from "@/components/settings-tabs"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
 export default async function SettingsPage() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) redirect("/login")
+
   const tenantId = await getTenantId()
   const tenant = await getTenant()
   const invoiceTemplates = await prisma.invoiceTemplate.findMany({
@@ -25,6 +31,8 @@ export default async function SettingsPage() {
         tenant={tenant ? { name: tenant.name } : null}
         invoiceTemplates={invoiceTemplates.map((t) => ({ id: t.id, name: t.name, content: t.content }))}
         emailTemplates={emailTemplates.map((t) => ({ id: t.id, name: t.name, subject: t.subject, body: t.body }))}
+        hasGoogleKeys={!!(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)}
+        hasOutlookKeys={!!(process.env.NEXT_PUBLIC_OUTLOOK_CLIENT_ID && process.env.OUTLOOK_CLIENT_SECRET)}
       />
     </div>
   )

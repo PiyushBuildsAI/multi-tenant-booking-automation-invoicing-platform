@@ -20,19 +20,23 @@ export function SettingsTabs({
   tenant,
   invoiceTemplates,
   emailTemplates,
+  hasGoogleKeys,
+  hasOutlookKeys,
 }: {
   tenant: { name: string } | null
   invoiceTemplates: Array<{ id: string; name: string; content: string }>
   emailTemplates: Array<{ id: string; name: string; subject: string; body: string }>
+  hasGoogleKeys: boolean
+  hasOutlookKeys: boolean
 }) {
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") ?? "business"
 
   const services = [
     { label: "Database", ok: true },
-    { label: "Email (Gmail)", ok: !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID },
-    { label: "Google Calendar", ok: !!process.env.GOOGLE_CLIENT_SECRET },
-    { label: "Outlook Calendar", ok: !!process.env.OUTLOOK_CLIENT_SECRET },
+    { label: "Email (Gmail)", ok: hasGoogleKeys },
+    { label: "Google Calendar", ok: hasGoogleKeys },
+    { label: "Outlook Calendar", ok: hasOutlookKeys },
   ]
 
   return (

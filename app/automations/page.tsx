@@ -6,8 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Zap, Plus, Trash2, Power, PowerOff, Clock, Mail } from "lucide-react"
 import Link from "next/link"
 import type { AutomationSequence } from "@prisma/client"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
 export default async function AutomationsPage() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) redirect("/login")
+
   const tenantId = await getTenantId()
   const sequences: AutomationSequence[] = await prisma.automationSequence.findMany({
     where: { tenantId },

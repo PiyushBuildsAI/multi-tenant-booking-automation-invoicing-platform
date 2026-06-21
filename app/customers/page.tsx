@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, Mail, Phone, Calendar, Receipt, User, ArrowUpRight } from "lucide-react"
 import Link from "next/link"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
 const gradients = [
   "from-blue-500 to-blue-600",
@@ -18,6 +21,9 @@ const gradients = [
 ]
 
 export default async function CustomersPage() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) redirect("/login")
+
   const tenantId = await getTenantId()
   const customers = await prisma.customer.findMany({
     where: { tenantId },
