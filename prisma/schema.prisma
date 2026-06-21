@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CalendarProvider {
+  GOOGLE
+  OUTLOOK
+}
+
+enum AutomationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum AutomationTriggerType {
+  BOOKING_CONFIRMED
+  BOOKING_REMINDER
+  INVOICE_SENT
+  INVOICE_OVERDUE
+  INVOICE_PAID
+  JOB_STARTED
+  JOB_COMPLETED
+  CUSTOM
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum JobStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  domain    String?
+  logo      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  customers         Customer[]
+  bookings          Booking[]
+  invoices          Invoice[]
+  automationSequences AutomationSequence[]
+  emailTemplates    EmailTemplate[]
+  calendarTokens    CalendarToken[]
+  invoiceTemplates  InvoiceTemplate[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdInvoices Invoice[] @relation("InvoiceCreator")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  bookings Booking[]
+  invoices Invoice[] @relation("CustomerInvoices")
+
+  @@unique([tenantId, email])
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  status      BookingStatus @default(SCHEDULED)
+  externalId  String?
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  automationLogs AutomationLog[]
+}
+
+model InvoiceTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  number      String
+  amount      Decimal
+  currency    String        @default("USD")
+  status      InvoiceStatus @default(DRAFT)
+  dueDate     DateTime?
+  paidAt      DateTime?
+  lineItems   Json?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation("CustomerInvoices", fields: [customerId], references: [id])
+  createdBy  String
+  creator    User     @relation("InvoiceCreator", fields: [createdBy], references: [id])
+
+  automationLogs AutomationLog[]
+}
+
+model CalendarToken {
+  id           String            @id @default(cuid())
+  provider     CalendarProvider
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  calendarId   String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+}
+
+model AutomationSequence {
+  id          String                 @id @default(cuid())
+  name        String
+  description String?
+  triggerType AutomationTriggerType
+  channel     AutomationChannel      @default(EMAIL)
+  steps       Json
+  isActive    Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model AutomationLog {
+  id        String   @id @default(cuid())
+  action    String
+  status    String
+  message   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  bookingId  String?
+  booking    Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  invoiceId  String?
+  invoice    Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  tenantId   String
+}

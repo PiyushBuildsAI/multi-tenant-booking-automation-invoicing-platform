@@ -1,4 +1,19 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Multi-tenant booking automation and invoicing platform.
+
+## Demo Credentials
+
+- **Email:** `demo@example.com`
+- **Password:** `demo1234`
+
+## Setup
+
+```bash
+# 1. Set DATABASE_URL in .env (PostgreSQL required)
+# 2. Push schema & seed demo data
+bunx prisma db push && bunx prisma db seed
+# 3. Start dev server
+bun run dev
+```
 
 ## Getting Started
 
