@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Zap, Plus, Trash2, Power, PowerOff } from "lucide-react"
 import Link from "next/link"
+import type { AutomationSequence } from "@prisma/client"
 
 export default async function AutomationsPage() {
   const tenantId = await getTenantId()
-  const sequences = await prisma.automationSequence.findMany({
+  const sequences: AutomationSequence[] = await prisma.automationSequence.findMany({
     where: { tenantId },
     orderBy: { createdAt: "desc" },
   })
