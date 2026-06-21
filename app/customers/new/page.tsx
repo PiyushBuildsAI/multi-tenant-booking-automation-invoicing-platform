@@ -4,19 +4,14 @@ import { useRouter } from "next/navigation"
 import { createCustomer } from "@/app/actions/customers"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Users, ArrowLeft } from "lucide-react"
-import Link from "next/link"
+import { Users } from "lucide-react"
 
 export default function NewCustomerForm() {
   const router = useRouter()
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="max-w-2xl">
       <div className="mb-6">
-        <Link href="/customers" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 mb-4">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Customers
-        </Link>
         <h1 className="text-2xl font-semibold tracking-tight">Add Customer</h1>
         <p className="text-sm text-zinc-500 mt-1">Add a new customer to your database.</p>
       </div>

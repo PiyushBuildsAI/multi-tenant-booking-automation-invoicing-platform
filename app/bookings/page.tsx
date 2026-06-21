@@ -1,20 +1,20 @@
 import { prisma } from "@/lib/prisma"
 import { getTenantId } from "@/lib/tenant"
 import { updateBookingStatus, deleteBooking } from "@/app/actions/bookings"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
+  Plus,
+  Trash2,
   CheckCircle2,
   XCircle,
   Clock,
-  Trash2,
-  Plus,
   ExternalLink,
-  CalendarCheck,
 } from "lucide-react"
 import Link from "next/link"
+import { SyncButton } from "@/components/sync-button"
 
-const statusStyles: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+const statusBadge: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   COMPLETED: "default",
   CONFIRMED: "secondary",
   SCHEDULED: "outline",
@@ -31,145 +31,127 @@ export default async function BookingsPage() {
     include: { customer: { select: { name: true, email: true } } },
   })
 
-  const statusCounts = {
-    total: bookings.length,
-    upcoming: bookings.filter((b) => b.startTime >= new Date()).length,
-    completed: bookings.filter((b) => b.status === "COMPLETED").length,
-    cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
-  }
+  const now = new Date()
+  const upcoming = bookings.filter((b) => b.startTime >= now).length
+  const completed = bookings.filter((b) => b.status === "COMPLETED").length
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Bookings</h1>
-          <p className="text-sm text-zinc-500 mt-1">Manage all appointments and schedules.</p>
+          <h1 className="text-xl font-semibold">Bookings</h1>
+          <p className="text-sm text-zinc-500 mt-0.5">Manage appointments and schedules.</p>
         </div>
-        <Link href="/bookings/new">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Booking
-          </Button>
-        </Link>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-sm text-zinc-500">Total</p>
-          <p className="text-xl font-semibold mt-1">{statusCounts.total}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-sm text-zinc-500">Upcoming</p>
-          <p className="text-xl font-semibold mt-1 text-blue-600">{statusCounts.upcoming}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-sm text-zinc-500">Completed</p>
-          <p className="text-xl font-semibold mt-1 text-emerald-600">{statusCounts.completed}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-sm text-zinc-500">Cancelled</p>
-          <p className="text-xl font-semibold mt-1 text-red-600">{statusCounts.cancelled}</p>
+        <div className="flex items-center gap-2">
+          <SyncButton />
+          <Link href="/bookings/new">
+            <Button size="sm" className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              New Booking
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="rounded-xl border bg-white shadow-sm">
-        {bookings.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 p-12 text-center">
-            <CalendarCheck className="h-12 w-12 text-zinc-300" />
-            <p className="text-sm text-zinc-500">No bookings yet. Create your first booking to get started.</p>
-            <Link href="/bookings/new">
-              <Button variant="outline" className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Booking
-              </Button>
-            </Link>
-          </div>
-        ) : (
+      <div className="flex items-center gap-4 text-sm">
+        <span className="text-zinc-500">{bookings.length} total</span>
+        <span className="text-blue-600 font-medium">{upcoming} upcoming</span>
+        <span className="text-emerald-600 font-medium">{completed} completed</span>
+      </div>
+
+      {bookings.length === 0 ? (
+        <div className="rounded-lg border bg-white py-12 text-center">
+          <p className="text-sm text-zinc-400 mb-3">No bookings yet.</p>
+          <Link href="/bookings/new">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              New Booking
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        <div className="rounded-lg border bg-white">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-zinc-50/50">
-                <th className="px-5 py-3 text-left font-medium text-zinc-500">Title</th>
-                <th className="px-5 py-3 text-left font-medium text-zinc-500">Customer</th>
-                <th className="px-5 py-3 text-left font-medium text-zinc-500">Date</th>
-                <th className="px-5 py-3 text-left font-medium text-zinc-500">Time</th>
-                <th className="px-5 py-3 text-left font-medium text-zinc-500">Status</th>
-                <th className="px-5 py-3 text-left font-medium text-zinc-500">Calendar</th>
-                <th className="px-5 py-3 text-right font-medium text-zinc-500">Actions</th>
+              <tr className="border-b text-left">
+                <th className="px-4 py-3 font-medium text-zinc-500 text-xs uppercase tracking-wider">Title</th>
+                <th className="px-4 py-3 font-medium text-zinc-500 text-xs uppercase tracking-wider">Customer</th>
+                <th className="px-4 py-3 font-medium text-zinc-500 text-xs uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 font-medium text-zinc-500 text-xs uppercase tracking-wider">Time</th>
+                <th className="px-4 py-3 font-medium text-zinc-500 text-xs uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 font-medium text-zinc-500 text-xs uppercase tracking-wider">Source</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
-              {bookings.map((b) => (
-                <tr key={b.id} className="border-b last:border-0 hover:bg-zinc-50/50 transition-colors">
-                  <td className="px-5 py-4">
-                    <p className="font-medium">{b.title}</p>
-                    {b.description && (
-                      <p className="text-xs text-zinc-400 truncate max-w-[200px]">{b.description}</p>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <p className="text-sm">{b.customer.name}</p>
-                    {b.customer.email && (
-                      <p className="text-xs text-zinc-400">{b.customer.email}</p>
-                    )}
-                  </td>
-                  <td className="px-5 py-4 text-zinc-600">
-                    {new Date(b.startTime).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </td>
-                  <td className="px-5 py-4 text-zinc-600">
-                    {new Date(b.startTime).toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge variant={statusStyles[b.status] ?? "outline"} className="capitalize">
-                      {b.status.toLowerCase().replace(/_/g, " ")}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-4">
-                    {b.externalId ? (
-                      <div className="flex items-center gap-1 text-xs text-emerald-600">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Synced
+              {bookings.map((b) => {
+                const isImported = !!b.externalId
+                return (
+                  <tr key={b.id} className="border-b last:border-0 hover:bg-zinc-50">
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{b.title}</p>
+                      {b.description && <p className="text-xs text-zinc-400 truncate max-w-[160px]">{b.description}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-600">{b.customer.name}</td>
+                    <td className="px-4 py-3 text-zinc-600 text-xs">
+                      {new Date(b.startTime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+                        <Clock className="h-3 w-3" />
+                        {new Date(b.startTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={statusBadge[b.status] ?? "outline"} className="capitalize text-xs">
+                        {b.status.toLowerCase().replace(/_/g, " ")}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      {isImported ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-blue-600">
+                          <ExternalLink className="h-3 w-3" />
+                          Google
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-zinc-400">Manual</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-0.5">
+                        {!isImported ? (
+                          <>
+                            <form action={updateBookingStatus.bind(null, b.id, "CONFIRMED")} className="inline">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-600" title="Confirm">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </form>
+                            <form action={updateBookingStatus.bind(null, b.id, "COMPLETED")} className="inline">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600" title="Complete">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </form>
+                            <form action={updateBookingStatus.bind(null, b.id, "CANCELLED")} className="inline">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" title="Cancel">
+                                <XCircle className="h-3.5 w-3.5" />
+                              </Button>
+                            </form>
+                          </>
+                        ) : null}
+                        <form action={deleteBooking.bind(null, b.id)} className="inline">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-red-600" title="Delete">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </form>
                       </div>
-                    ) : (
-                      <span className="text-xs text-zinc-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-1">
-                      <form action={updateBookingStatus.bind(null, b.id, "CONFIRMED")}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600">
-                          <CheckCircle2 className="h-4 w-4" />
-                        </Button>
-                      </form>
-                      <form action={updateBookingStatus.bind(null, b.id, "COMPLETED")}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600">
-                          <CheckCircle2 className="h-4 w-4" />
-                        </Button>
-                      </form>
-                      <form action={updateBookingStatus.bind(null, b.id, "CANCELLED")}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600">
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </form>
-                      <form action={deleteBooking.bind(null, b.id)}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

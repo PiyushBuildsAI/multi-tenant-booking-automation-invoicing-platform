@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation"
 import { createInvoice } from "@/app/actions/invoices"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { FileText, ArrowLeft } from "lucide-react"
-import Link from "next/link"
+import { FileText } from "lucide-react"
 
 export default function NewInvoicePage() {
   const router = useRouter()
@@ -20,12 +19,8 @@ export default function NewInvoicePage() {
   }, [])
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="max-w-2xl">
       <div className="mb-6">
-        <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 mb-4">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Invoices
-        </Link>
         <h1 className="text-2xl font-semibold tracking-tight">New Invoice</h1>
         <p className="text-sm text-zinc-500 mt-1">Create a new invoice for a customer.</p>
       </div>

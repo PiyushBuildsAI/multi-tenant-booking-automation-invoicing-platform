@@ -17,6 +17,13 @@ export async function createInvoice(formData: FormData) {
   const count = await prisma.invoice.count()
   const number = `INV-${String(count + 1).padStart(4, "0")}`
 
+  let systemUser = await prisma.user.findFirst({ where: { tenantId, role: "system" } })
+  if (!systemUser) {
+    systemUser = await prisma.user.create({
+      data: { email: `system@${tenantId}.local`, name: "System", password: "", role: "system", tenantId },
+    })
+  }
+
   await prisma.invoice.create({
     data: {
       number,
@@ -25,7 +32,7 @@ export async function createInvoice(formData: FormData) {
       notes,
       customerId,
       tenantId,
-      createdBy: "system",
+      createdBy: systemUser.id,
     },
   })
 

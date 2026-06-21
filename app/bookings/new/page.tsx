@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { createBooking } from "@/app/actions/bookings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { CalendarCheck, ArrowLeft } from "lucide-react"
-import Link from "next/link"
+import { CalendarCheck } from "lucide-react"
+import { DateTimePicker } from "@/components/date-time-picker"
 
 export default function NewBookingPage() {
   const router = useRouter()
@@ -20,17 +20,11 @@ export default function NewBookingPage() {
   }, [])
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link href="/bookings" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 mb-4">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Bookings
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">New Booking</h1>
-        <p className="text-sm text-zinc-500 mt-1">Schedule a new appointment.</p>
-      </div>
+    <>
+      <h1 className="text-2xl font-semibold tracking-tight mb-1">New Booking</h1>
+      <p className="text-sm text-zinc-500 mb-6">Schedule a new appointment.</p>
 
-      <div className="rounded-xl border bg-white shadow-sm p-6">
+      <div className="max-w-2xl rounded-xl border bg-white shadow-sm p-6">
         <form action={createBooking} className="space-y-5">
           <div className="space-y-2">
             <label className="text-sm font-medium">Title</label>
@@ -64,14 +58,8 @@ export default function NewBookingPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Start Time</label>
-              <Input type="datetime-local" name="startTime" required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">End Time</label>
-              <Input type="datetime-local" name="endTime" required />
-            </div>
+            <DateTimePicker name="startTime" label="Start Time" required />
+            <DateTimePicker name="endTime" label="End Time" required />
           </div>
 
           <div className="flex items-center gap-3 pt-2">
@@ -85,6 +73,6 @@ export default function NewBookingPage() {
           </div>
         </form>
       </div>
-    </div>
+    </>
   )
 }

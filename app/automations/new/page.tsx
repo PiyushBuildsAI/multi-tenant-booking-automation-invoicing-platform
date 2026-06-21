@@ -4,8 +4,7 @@ import { useState } from "react"
 import { createSequence } from "@/app/actions/automations"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Zap, ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react"
-import Link from "next/link"
+import { Zap, Plus, Trash2, GripVertical } from "lucide-react"
 
 const TRIGGER_OPTIONS = [
   { value: "BOOKING_CONFIRMED", label: "Booking Confirmed" },
@@ -33,15 +32,8 @@ export default function NewSequencePage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="max-w-2xl">
       <div className="mb-6">
-        <Link
-          href="/automations"
-          className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 mb-4"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Automations
-        </Link>
         <h1 className="text-2xl font-semibold tracking-tight">New Automation Sequence</h1>
         <p className="text-sm text-zinc-500 mt-1">
           Create an automated email sequence triggered by events.

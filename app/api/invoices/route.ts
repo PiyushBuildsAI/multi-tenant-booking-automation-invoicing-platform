@@ -11,8 +11,17 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const json = await request.json()
+  const tenantId = json.tenantId ?? "demo"
   const count = await prisma.invoice.count()
   const number = `INV-${String(count + 1).padStart(4, "0")}`
+
+  let systemUser = await prisma.user.findFirst({ where: { tenantId, role: "system" } })
+  if (!systemUser) {
+    systemUser = await prisma.user.create({
+      data: { email: `system@${tenantId}.local`, name: "System", password: "", role: "system", tenantId },
+    })
+  }
+
   const invoice = await prisma.invoice.create({
     data: {
       number,
@@ -22,8 +31,8 @@ export async function POST(request: Request) {
       lineItems: json.lineItems,
       notes: json.notes,
       customerId: json.customerId,
-      tenantId: json.tenantId ?? "demo",
-      createdBy: json.createdBy ?? "system",
+      tenantId,
+      createdBy: systemUser.id,
     },
     include: { customer: { select: { id: true, name: true } } },
   })

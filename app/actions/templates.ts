@@ -15,7 +15,7 @@ export async function createBookingTemplate(formData: FormData) {
   })
 
   revalidatePath("/settings")
-  redirect("/settings")
+  redirect("/settings?tab=invoice-templates")
 }
 
 export async function createEmailTemplate(formData: FormData) {
@@ -29,5 +29,5 @@ export async function createEmailTemplate(formData: FormData) {
   })
 
   revalidatePath("/settings")
-  redirect("/settings")
+  redirect("/settings?tab=email-templates")
 }
