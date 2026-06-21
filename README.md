@@ -1,52 +1,197 @@
-Multi-tenant booking automation and invoicing platform.
+# FlowSync — Booking Automation & Invoicing Platform
 
-## Demo Credentials
+Multi-tenant platform for booking management, automated email sequences, calendar sync, and invoicing.
 
-- **Email:** `demo@example.com`
-- **Password:** `demo1234`
+## Tech Stack
 
-## Setup
+- **Framework:** Next.js 16 (App Router)
+- **UI:** Shadcn UI + HeroUI v3 + Lucide icons
+- **Styling:** Tailwind CSS v4
+- **Database:** PostgreSQL + Prisma 7
+- **Runtime:** Bun
+- **Email:** Resend
+- **Calendar:** Google Calendar API / Outlook Calendar API
+
+## Prerequisites
+
+- Bun 1.1+
+- PostgreSQL database (local Docker or remote)
+- Docker (optional, for containerized deployment)
+
+## Quick Start (Local)
 
 ```bash
-# 1. Set DATABASE_URL in .env (PostgreSQL required)
-# 2. Push schema & seed demo data
-bunx prisma db push && bunx prisma db seed
-# 3. Start dev server
+# 1. Install dependencies
+bun install
+
+# 2. Generate Prisma client
+bunx prisma generate
+
+# 3. Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your DATABASE_URL
+
+# 4. Push schema to database
+bunx prisma db push
+
+# 5. Seed demo data
+bunx prisma db seed
+
+# 6. Start development server
 bun run dev
 ```
 
-## Getting Started
+Open [http://localhost:3000](http://localhost:3000). The app redirects to `/dashboard`.
 
-First, run the development server:
+## Docker
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Build the image
+docker build -t flowsync .
+
+# Run with PostgreSQL on host machine
+docker run -d \
+  --name flowsync \
+  -p 3000:3000 \
+  -e DATABASE_URL="postgresql://postgres:postgres@host.docker.internal:5432/multi_tenant_booking?schema=public" \
+  flowsync
+
+# Push schema + seed inside container
+docker exec flowsync bunx prisma db push
+docker exec flowsync bunx prisma db seed
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Docker + all integrations
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+docker run -d \
+  --name flowsync \
+  -p 3000:3000 \
+  -e DATABASE_URL="postgresql://postgres:postgres@host.docker.internal:5432/multi_tenant_booking?schema=public" \
+  -e RESEND_API_KEY="re_..." \
+  -e NEXT_PUBLIC_GOOGLE_CLIENT_ID="..." \
+  -e GOOGLE_CLIENT_SECRET="..." \
+  -e NEXT_PUBLIC_OUTLOOK_CLIENT_ID="..." \
+  -e OUTLOOK_CLIENT_SECRET="..." \
+  -e CRON_SECRET="..." \
+  flowsync
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> Use `host.docker.internal` when PostgreSQL runs on the host machine.
+> Use a Docker network + container name when PostgreSQL runs in another container.
 
-## Learn More
+### Docker Compose (PostgreSQL + app together)
 
-To learn more about Next.js, take a look at the following resources:
+Create `docker-compose.yml`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```yaml
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/multi_tenant_booking?schema=public"
+    depends_on:
+      - db
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: multi_tenant_booking
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
-## Deploy on Vercel
+volumes:
+  pgdata:
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Start both containers
+docker compose up -d
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# multi-tenant-booking-automation-invoicing-platform
+# Push schema + seed
+docker compose exec app bunx prisma db push
+docker compose exec app bunx prisma db seed
+
+# View logs
+docker compose logs -f app
+```
+
+## API Keys Setup
+
+The app works with just `DATABASE_URL`. Optional features need these keys.
+
+### Resend (Email)
+
+1. Go to [resend.com](https://resend.com) → Sign up
+2. Navigate to **API Keys** → **Create API Key**
+3. Copy the key (starts with `re_...`) and set:
+   ```
+   RESEND_API_KEY="re_xxxxxxxxxxxx"
+   ```
+
+### Google Calendar (Booking Sync)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a project → **APIs & Services** → **Library**
+3. Enable **Google Calendar API**
+4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
+5. Application type: **Web application**
+6. Authorized redirect URI: `http://localhost:3000/api/calendar/google/callback`
+7. Copy the Client ID and Secret:
+   ```
+   NEXT_PUBLIC_GOOGLE_CLIENT_ID="xxx.apps.googleusercontent.com"
+   GOOGLE_CLIENT_SECRET="GOCSPX-xxx"
+   ```
+
+### Outlook Calendar (Booking Sync)
+
+1. Go to [Azure Portal](https://portal.azure.com) → **App registrations** → **New registration**
+2. Name: `FlowSync`, Account type: **Personal Microsoft accounts only**
+3. Redirect URI: Web → `http://localhost:3000/api/calendar/outlook/callback`
+4. Go to **API permissions** → **Add permission** → **Microsoft Graph** → **Delegated** → `Calendars.ReadWrite`
+5. Go to **Certificates & secrets** → **Client secrets** → **New client secret**
+6. Copy the values:
+   ```
+   NEXT_PUBLIC_OUTLOOK_CLIENT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+   OUTLOOK_CLIENT_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ```
+
+### Cron Secret (Automation Processing)
+
+```bash
+openssl rand -hex 32
+```
+
+Set as:
+```
+CRON_SECRET="your-random-string"
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `RESEND_API_KEY` | No | Resend API key for email sending |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | No | Google OAuth client ID (public) |
+| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
+| `NEXT_PUBLIC_OUTLOOK_CLIENT_ID` | No | Outlook OAuth client ID (public) |
+| `OUTLOOK_CLIENT_SECRET` | No | Outlook OAuth client secret |
+| `NEXT_PUBLIC_APP_URL` | No | App URL for OAuth redirects (default: `http://localhost:3000`) |
+| `CRON_SECRET` | No | Secret to secure the cron endpoint |
+
+## Features
+
+- **Dashboard** — KPI cards, recent bookings, recent invoices
+- **Bookings** — CRUD operations, status management, calendar sync, automation triggers
+- **Customers** — Contact management, journey timeline (recent bookings + invoices)
+- **Invoices** — Create, send, mark paid/overdue, email delivery, automation triggers
+- **Automations** — Multi-step email sequences triggered by booking/invoice events
+- **Calendar** — Google & Outlook OAuth integration for booking sync
+- **Settings** — Business profile, invoice templates, email templates
