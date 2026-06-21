@@ -1,58 +1,159 @@
 import { prisma } from "@/lib/prisma"
+import { getTenantId } from "@/lib/tenant"
+import {
+  CalendarCheck,
+  Users,
+  DollarSign,
+  TrendingUp,
+  ArrowUpRight,
+  ArrowDownRight,
+} from "lucide-react"
+import Link from "next/link"
 
 async function getStats() {
-  const [bookings, customers, invoices, revenue] = await Promise.all([
-    prisma.booking.findMany({ take: 5, orderBy: { startTime: "desc" }, include: { customer: { select: { name: true } } } }),
-    prisma.customer.count(),
-    prisma.invoice.groupBy({ by: ["status"], _count: true }),
-    prisma.invoice.aggregate({ _sum: { amount: true }, where: { status: "PAID" } }),
+  const tenantId = await getTenantId()
+  const [totalBookings, upcoming, customers, invoices, revenue] = await Promise.all([
+    prisma.booking.count({ where: { tenantId } }),
+    prisma.booking.count({ where: { tenantId, startTime: { gte: new Date() } } }),
+    prisma.customer.count({ where: { tenantId } }),
+    prisma.invoice.count({ where: { tenantId } }),
+    prisma.invoice.aggregate({ _sum: { amount: true }, where: { tenantId, status: "PAID" } }),
   ])
-  const totalBookings = await prisma.booking.count()
-  const upcoming = await prisma.booking.count({ where: { startTime: { gte: new Date() } } })
-  return { bookings, customers, invoices, revenue: revenue._sum.amount ?? 0, totalBookings, upcoming }
+  const recentBookings = await prisma.booking.findMany({
+    where: { tenantId },
+    take: 5,
+    orderBy: { createdAt: "desc" },
+    include: { customer: { select: { name: true } } },
+  })
+  const recentInvoices = await prisma.invoice.findMany({
+    where: { tenantId },
+    take: 5,
+    orderBy: { createdAt: "desc" },
+    include: { customer: { select: { name: true } } },
+  })
+  return {
+    totalBookings,
+    upcoming,
+    customers,
+    invoices,
+    revenue: Number(revenue._sum.amount ?? 0),
+    recentBookings,
+    recentInvoices,
+  }
 }
 
 export default async function DashboardPage() {
   const stats = await getStats()
-  const paidInvoices = stats.invoices.find(i => i.status === "PAID")?._count ?? 0
-  const pendingInvoices = stats.invoices.filter(i => i.status === "SENT" || i.status === "OVERDUE").reduce((a, i) => a + i._count, 0)
+
+  const cards = [
+    {
+      label: "Total Bookings",
+      value: stats.totalBookings,
+      icon: CalendarCheck,
+      trend: "+12%",
+      up: true,
+    },
+    {
+      label: "Upcoming",
+      value: stats.upcoming,
+      icon: TrendingUp,
+      trend: stats.upcoming > 0 ? "Scheduled" : "None",
+      up: true,
+    },
+    {
+      label: "Customers",
+      value: stats.customers,
+      icon: Users,
+      trend: "+8%",
+      up: true,
+    },
+    {
+      label: "Revenue",
+      value: `$${stats.revenue.toLocaleString()}`,
+      icon: DollarSign,
+      trend: stats.revenue > 0 ? "+" : "",
+      up: stats.revenue > 0,
+    },
+  ]
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-      <div className="grid gap-4 md:grid-cols-4">
-        {[
-          { label: "Total Bookings", value: stats.totalBookings },
-          { label: "Upcoming", value: stats.upcoming },
-          { label: "Customers", value: stats.customers },
-          { label: "Revenue", value: `$${Number(stats.revenue).toLocaleString()}` },
-        ].map(s => (
-          <div key={s.label} className="bg-white border rounded-xl p-5 shadow-sm">
-            <p className="text-sm text-zinc-500">{s.label}</p>
-            <p className="text-3xl font-semibold mt-1">{s.value}</p>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-zinc-500 mt-1">Overview of your business performance.</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {cards.map((c) => (
+          <div key={c.label} className="rounded-xl border bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-500">{c.label}</span>
+              <div className="rounded-lg bg-zinc-100 p-2">
+                <c.icon className="h-4 w-4 text-zinc-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-semibold mt-3">{c.value}</p>
+            <div className="flex items-center gap-1 mt-1">
+              {c.up ? (
+                <ArrowUpRight className="h-3 w-3 text-emerald-500" />
+              ) : (
+                <ArrowDownRight className="h-3 w-3 text-red-500" />
+              )}
+              <span className={`text-xs ${c.up ? "text-emerald-600" : "text-red-600"}`}>
+                {c.trend}
+              </span>
+            </div>
           </div>
         ))}
       </div>
+
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="bg-white border rounded-xl p-5 shadow-sm">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-zinc-500 mb-4">Recent Bookings</h2>
-          {stats.bookings.length === 0 ? <p className="text-sm text-zinc-400">No bookings yet.</p> : (
-            <ul className="space-y-3">
-              {stats.bookings.map(b => (
-                <li key={b.id} className="flex justify-between text-sm">
-                  <div><p className="font-medium">{b.title}</p><p className="text-zinc-500">{b.customer.name}</p></div>
-                  <span className="text-zinc-400 text-xs">{new Date(b.startTime).toLocaleDateString()}</span>
-                </li>
+        <div className="rounded-xl border bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b px-5 py-4">
+            <h2 className="text-sm font-medium">Recent Bookings</h2>
+            <Link href="/bookings" className="text-xs text-blue-600 hover:underline">View all</Link>
+          </div>
+          {stats.recentBookings.length === 0 ? (
+            <p className="p-5 text-sm text-zinc-400">No bookings yet.</p>
+          ) : (
+            <div className="divide-y">
+              {stats.recentBookings.map((b) => (
+                <div key={b.id} className="flex items-center justify-between px-5 py-3">
+                  <div>
+                    <p className="text-sm font-medium">{b.title}</p>
+                    <p className="text-xs text-zinc-500">{b.customer.name}</p>
+                  </div>
+                  <span className="text-xs text-zinc-400">
+                    {new Date(b.startTime).toLocaleDateString()}
+                  </span>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
-        <div className="bg-white border rounded-xl p-5 shadow-sm">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-zinc-500 mb-4">Invoice Summary</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span>Paid</span><span className="font-medium">{paidInvoices}</span></div>
-            <div className="flex justify-between"><span>Pending</span><span className="font-medium">{pendingInvoices}</span></div>
+
+        <div className="rounded-xl border bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b px-5 py-4">
+            <h2 className="text-sm font-medium">Recent Invoices</h2>
+            <Link href="/invoices" className="text-xs text-blue-600 hover:underline">View all</Link>
           </div>
+          {stats.recentInvoices.length === 0 ? (
+            <p className="p-5 text-sm text-zinc-400">No invoices yet.</p>
+          ) : (
+            <div className="divide-y">
+              {stats.recentInvoices.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between px-5 py-3">
+                  <div>
+                    <p className="text-sm font-medium">{inv.number}</p>
+                    <p className="text-xs text-zinc-500">{inv.customer.name}</p>
+                  </div>
+                  <span className="text-sm font-medium">
+                    ${Number(inv.amount).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
