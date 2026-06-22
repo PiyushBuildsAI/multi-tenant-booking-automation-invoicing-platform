@@ -13,10 +13,6 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { SyncButton } from "@/components/sync-button"
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
-
 const statusBadge: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   COMPLETED: "default",
   CONFIRMED: "secondary",
@@ -27,9 +23,6 @@ const statusBadge: Record<string, "default" | "secondary" | "destructive" | "out
 }
 
 export default async function BookingsPage() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) redirect("/login")
-
   const tenantId = await getTenantId()
   const bookings = await prisma.booking.findMany({
     where: { tenantId },

@@ -1,14 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { getTenantId, getTenant } from "@/lib/tenant"
 import { SettingsTabs } from "@/components/settings-tabs"
-import { auth } from "@/lib/auth"
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
-
 export default async function SettingsPage() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) redirect("/login")
-
   const tenantId = await getTenantId()
   const tenant = await getTenant()
   const invoiceTemplates = await prisma.invoiceTemplate.findMany({

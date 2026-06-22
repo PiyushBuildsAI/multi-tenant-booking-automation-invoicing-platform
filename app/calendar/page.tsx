@@ -28,12 +28,14 @@ export default function CalendarPage() {
   const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
   const connectGoogle = () => {
     if (!GOOGLE_CLIENT_ID) return
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || window.location.origin
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
-      redirect_uri: `${window.location.origin}/api/calendar/google/callback`,
+      redirect_uri: `${appUrl}/api/calendar/google/callback`,
       response_type: "code",
       scope: "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send",
       access_type: "offline",
+      prompt: "consent",
       state: tenantId,
     })
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`

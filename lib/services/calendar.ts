@@ -16,7 +16,12 @@ async function getValidGoogleToken(tenantId: string) {
   })
   if (!token?.accessToken) return null
 
-  if (token.expiresAt && token.expiresAt < new Date() && token.refreshToken) {
+  if (token.expiresAt && token.expiresAt < new Date()) {
+    if (!token.refreshToken) {
+      console.warn(`[calendar] Token expired and no refresh token for tenant ${tenantId}`)
+      return null
+    }
+
     const resp = await fetch(GOOGLE_TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -37,6 +42,8 @@ async function getValidGoogleToken(tenantId: string) {
         },
       })
       return data.access_token
+    } else {
+      console.error(`[calendar] Failed to refresh Google token:`, data)
     }
     return null
   }
@@ -45,6 +52,7 @@ async function getValidGoogleToken(tenantId: string) {
 }
 
 export async function exchangeGoogleCode(code: string, tenantId: string) {
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
   const resp = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -52,7 +60,7 @@ export async function exchangeGoogleCode(code: string, tenantId: string) {
       code,
       client_id: getGoogleClientId(),
       client_secret: getGoogleClientSecret(),
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/calendar/google/callback`,
+      redirect_uri: `${appUrl}/api/calendar/google/callback`,
       grant_type: "authorization_code",
     }),
   })
@@ -120,15 +128,23 @@ export async function exchangeOutlookCode(code: string, tenantId: string) {
 }
 
 export async function syncBookingToGoogleCalendar(bookingId: string) {
+  console.log(`[syncBookingToGoogleCalendar] Starting for booking: ${bookingId}`);
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: { customer: true },
   })
-  if (!booking) return
+  if (!booking) {
+    console.error(`[syncBookingToGoogleCalendar] Booking ${bookingId} not found`);
+    return;
+  }
 
   const accessToken = await getValidGoogleToken(booking.tenantId)
-  if (!accessToken) return
+  if (!accessToken) {
+    console.warn(`[syncBookingToGoogleCalendar] No access token for tenant ${booking.tenantId}`);
+    return;
+  }
 
+  console.log(`[syncBookingToGoogleCalendar] Got access token, creating event...`);
   const resp = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
     method: "POST",
     headers: {
@@ -142,9 +158,15 @@ export async function syncBookingToGoogleCalendar(bookingId: string) {
       end: { dateTime: booking.endTime.toISOString() },
     }),
   })
+  
   const event = await resp.json()
+  console.log(`[syncBookingToGoogleCalendar] Google API response status: ${resp.status}`);
+  if (!resp.ok) {
+    console.error(`[syncBookingToGoogleCalendar] Error from Google Calendar:`, JSON.stringify(event, null, 2));
+  }
 
   if (event.id) {
+    console.log(`[syncBookingToGoogleCalendar] Event created with ID: ${event.id}`);
     await prisma.booking.update({
       where: { id: bookingId },
       data: { externalId: event.id },
